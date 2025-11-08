@@ -1,5 +1,6 @@
 {
     "require": {
-        "nutgram/nutgram": "^4.39"
+        "nutgram/nutgram": "^4.39",
+      "ext-mysqli": "*"
     }
 }
