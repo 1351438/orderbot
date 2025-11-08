@@ -13,6 +13,7 @@ ini_set('log_errors', TRUE);
 ini_set('error_log', __DIR__ . '/errors.log'); // Logging file path
 
 
+use Psr\Container\ContainerInterface;
 use SergiX44\Nutgram\Configuration;
 use SergiX44\Nutgram\Nutgram;
 use SergiX44\Nutgram\RunningMode\Webhook;
@@ -30,7 +31,6 @@ try {
     $telegram = new Nutgram(BOT_TOKEN, $configuration);
     $telegram->setRunningMode(Webhook::class);
     $telegram->getContainer()->get(Webhook::class)->processUpdates($telegram);
-
 
     if (isset($_GET['set'])) {
         echo "Setting webhook";

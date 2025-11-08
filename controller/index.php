@@ -5,6 +5,7 @@ use Psr\Container\NotFoundExceptionInterface;
 use SergiX44\Nutgram\Nutgram;
 use SergiX44\Nutgram\RunningMode\RunningMode;
 use SergiX44\Nutgram\RunningMode\Webhook;
+use SergiX44\Nutgram\Telegram\Properties\MessageType;
 use SergiX44\Nutgram\Telegram\Types\Keyboard\InlineKeyboardButton;
 use SergiX44\Nutgram\Telegram\Types\Keyboard\InlineKeyboardMarkup;
 
@@ -70,23 +71,23 @@ try {
         if ($res->num_rows == 1) {
             $row = $res->fetch_assoc();
             $telegram->sendMessage(
-                sprintf("نشست جدید آغاز شد، این نشست تا پایان %s فعال میباشد، برای تمدید دوباره از کلمه مخفی استفاده کنید.", jdate("d F H:i", strtotime($row['expire_in']))),
-                reply_markup: InlineKeyboardMarkup::make()
-                    ->addRow(
-                        InlineKeyboardButton::make("مشاهد مناطق", callback_data: "regions")
-                    )
+                sprintf("نشست جدید آغاز شد، این نشست تا پایان %s فعال میباشد، برای تمدید دوباره از کلمه مخفی استفاده کنید. \n دستور /start را ارسال کنید.", jdate("d F H:i", strtotime($row['expire_in']))),
+
             );
         }
-    }
+    } else {
+        // check if there is a session load hidden bot
+        $sessions = $mysqli->query("SELECT * FROM sessions WHERE user_id = '$userId' AND status = 'ACTIVE'");
+        if ($sessions->num_rows == 1) {
+            $row = $sessions->fetch_assoc();
+            $sessionId = $row['id'];
+            $mysqli->query("UPDATE sessions SET update_on = CURRENT_TIMESTAMP() WHERE user_id = '$userId' AND id = '$sessionId'");
+            require_once __DIR__ . "/HiddenBot/HiddenBotController.php";
+        }
 
-
-    // check if there is a session load hidden bot
-    $sessions = $mysqli->query("SELECT * FROM sessions WHERE user_id = '$userId' AND status = 'ACTIVE'");
-    if ($sessions->num_rows == 1) {
-        $row = $sessions->fetch_assoc();
-        $sessionId = $row['id'];
-        $mysqli->query("UPDATE sessions SET update_on = CURRENT_TIMESTAMP() WHERE user_id = '$userId' AND id = '$sessionId'");
-        require_once __DIR__ . "/HiddenBot/HiddenBotController.php";
+        $telegram->onMessageType(MessageType::PHOTO, function (Nutgram $bot) {
+            $bot->sendMessage(json_encode($bot->update()->message->photo[0]->file_id));
+        });
     }
 
     $telegram->run();
