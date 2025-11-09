@@ -55,40 +55,43 @@ try {
         );
     });
 
-    $text = $telegram->update()->message->text;
-    $stmt = $mysqli->prepare("SELECT * FROM secret_tokens WHERE BINARY secret = ?") or error_log($mysqli->error);
-    $stmt->bind_param("s", $text);
-    $stmt->execute();
-    $result = $stmt->get_result();
-    if ($result->num_rows == 1) {
-        // create session
-        $row = $result->fetch_assoc();
-        $mysqli->query("UPDATE sessions SET update_on = CURRENT_TIMESTAMP() - INTERVAL 1 HOUR WHERE user_id = '$userId'") or error_log($mysqli->error);
-        $mysqli->query("INSERT INTO sessions (user_id, secret_id) VALUES ('$userId', '$row[id]')") or error_log($mysqli->error);
+    if ($telegram->update()->message->text != null) {
+        $text = $telegram->update()->message->text;
+        $stmt = $mysqli->prepare("SELECT * FROM secret_tokens WHERE BINARY secret = ?") or error_log($mysqli->error);
+        $stmt->bind_param("s", $text);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        if ($result->num_rows == 1) {
+            // create session
+            $row = $result->fetch_assoc();
+            $mysqli->query("UPDATE sessions SET update_on = CURRENT_TIMESTAMP() - INTERVAL 1 HOUR WHERE user_id = '$userId'") or error_log($mysqli->error);
+            $mysqli->query("INSERT INTO sessions (user_id, secret_id) VALUES ('$userId', '$row[id]')") or error_log($mysqli->error);
 
-        $res = $mysqli->query("SELECT * FROM sessions WHERE user_id = '$userId' AND status = 'ACTIVE' AND expire_in > current_timestamp()");
+            $res = $mysqli->query("SELECT * FROM sessions WHERE user_id = '$userId' AND status = 'ACTIVE' AND expire_in > current_timestamp()");
 
-        if ($res->num_rows == 1) {
-            $row = $res->fetch_assoc();
-            $telegram->sendMessage(
-                sprintf("نشست جدید آغاز شد، این نشست تا پایان %s فعال میباشد، برای تمدید دوباره از کلمه مخفی استفاده کنید. \n دستور /start را ارسال کنید.", jdate("d F H:i", strtotime($row['expire_in']))),
+            if ($res->num_rows == 1) {
+                $row = $res->fetch_assoc();
+                $telegram->sendMessage(
+                    sprintf("نشست جدید آغاز شد، این نشست تا پایان %s فعال میباشد، برای تمدید دوباره از کلمه مخفی استفاده کنید. \n دستور /start را ارسال کنید.", jdate("d F H:i", strtotime($row['expire_in']))),
 
-            );
+                );
+            }
         }
-    } else {
-        // check if there is a session load hidden bot
-        $sessions = $mysqli->query("SELECT * FROM sessions WHERE user_id = '$userId' AND status = 'ACTIVE'");
-        if ($sessions->num_rows == 1) {
-            $row = $sessions->fetch_assoc();
-            $sessionId = $row['id'];
-            $mysqli->query("UPDATE sessions SET update_on = CURRENT_TIMESTAMP() WHERE user_id = '$userId' AND id = '$sessionId'");
-            require_once __DIR__ . "/HiddenBot/HiddenBotController.php";
-        }
-
-        $telegram->onMessageType(MessageType::PHOTO, function (Nutgram $bot) {
-            $bot->sendMessage(json_encode($bot->update()->message->photo[0]->file_id));
-        });
     }
+
+    // check if there is a session load hidden bot
+    $sessions = $mysqli->query("SELECT * FROM sessions WHERE user_id = '$userId' AND status = 'ACTIVE'");
+    if ($sessions->num_rows == 1) {
+        $row = $sessions->fetch_assoc();
+        $sessionId = $row['id'];
+        $mysqli->query("UPDATE sessions SET update_on = CURRENT_TIMESTAMP() WHERE user_id = '$userId' AND id = '$sessionId'");
+        require_once __DIR__ . "/HiddenBot/HiddenBotController.php";
+    }
+
+    $telegram->onMessageType(MessageType::PHOTO, function (Nutgram $bot) {
+        $bot->sendMessage(json_encode($bot->update()->message->photo[0]->file_id));
+    });
+
 
     $telegram->run();
 } catch (mysqli_sql_exception $exception) {
