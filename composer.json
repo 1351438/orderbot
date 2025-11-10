@@ -1,6 +1,12 @@
 {
     "require": {
         "nutgram/nutgram": "^4.39",
-      "ext-mysqli": "*"
+      "ext-mysqli": "*",
+        "olifanton/ton": "^1.5"
+    },
+    "config": {
+        "allow-plugins": {
+            "php-http/discovery": true
+        }
     }
 }

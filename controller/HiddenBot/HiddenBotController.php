@@ -1,5 +1,5 @@
 <?php
-global $telegram, $sessionId, $mysqli;
+global $telegram, $sessionId, $session, $mysqli;
 
 use SergiX44\Nutgram\Nutgram;
 use SergiX44\Nutgram\Telegram\Properties\MessageType;
@@ -9,13 +9,16 @@ use SergiX44\Nutgram\Telegram\Types\Keyboard\InlineKeyboardMarkup;
 
 function startCommand(Nutgram $bot)
 {
+    global $session;
     $user = new UserController($bot->userId());
     $user->setSetting("step", 'none');
 
     $phone = $user->getSetting("phone_number") ?? "ثبت نشده";
     $address = $user->getSetting("address") ?? "ثبت نشده";
+    $expireIn = jdate("d F Y H:i", strtotime($session['expire_in']));
 
-    $bot->sendMessage(sprintf("خوش اومدید، قبل از ثبت سفارش حتما آدرس و شماره تماس خود را ثبت کنید.\nآدرس فعلی: %s \n شماره تماس: %s", $address, $phone),
+
+    $bot->sendMessage(sprintf("خوش اومدید، قبل از ثبت سفارش حتما آدرس و شماره تماس خود را ثبت کنید.\nآدرس فعلی: %s \n شماره تماس: %s\nانقضای نشست فعلی: %s", $address, $phone, $expireIn),
         protect_content: true,
         reply_markup: InlineKeyboardMarkup::make()
             ->addRow(
@@ -128,6 +131,7 @@ $telegram->onCallbackQueryData('buy {productId}-{count}', function (Nutgram $bot
             $user = new UserController($bot->userId());
             $address = $user->getSetting("address") ?? "ثبت نشده";
             $phone = $user->getSetting("phone_number") ?? "ثبت نشده";
+            $walletController =new WalletController();
             $bot->sendMessage(
                 sprintf("محصول: 
 <b>%s</b>
@@ -139,16 +143,22 @@ $telegram->onCallbackQueryData('buy {productId}-{count}', function (Nutgram $bot
 شماره تماس: %s
 ---------------
 مقدار: %s
-مبلغ نهایی: <b>%s</b>
+مبلغ نهایی: <b><code>%s</code> TON</b>
 آدرس کیف پول: <code>%s</code>
 کامنت: <code>%s</code>
+
 <blockquote>
-تراکنش را در شبکه TON به آدرس ولت با کامنت معین شده واریز کنید، در غیر این صورت امکان تایید نشدن سفارش وجود دارد.
-این تراکنش تا 10 دقیقه معتبر است، پس از زمان مقرر واریز کردن احتمال لغو سفارش و قبول نشدن آنرا دارد.
+⚠️ تراکنش را در شبکه TON به آدرس ولت با کامنت معین شده واریز کنید، در غیر این صورت امکان تایید نشدن سفارش وجود دارد.
+</blockquote>
+<blockquote>
+⚠️ این تراکنش تا 10 دقیقه معتبر است، پس از زمان مقرر واریز کردن احتمال لغو سفارش و قبول نشدن آنرا دارد.
 </blockquote>",
                     $row['name'], $row['description'],
                     $row['city_name'], $row['region_name'], $address, $phone,
-                    $count, $amount, "Address", $order['transaction_code']), parse_mode: ParseMode::HTML, reply_to_message_id: $bot->messageId());
+                    $count, $amount, $walletController->getWallet(), $order['transaction_code']),
+                parse_mode: ParseMode::HTML,
+                protect_content: true,
+                reply_to_message_id: $bot->messageId());
         } else {
             $bot->answerCallbackQuery($bot->callbackQuery()->id, "اوردر یافت نشد");
         }

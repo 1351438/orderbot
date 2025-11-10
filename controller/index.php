@@ -10,6 +10,10 @@ use SergiX44\Nutgram\Telegram\Types\Keyboard\InlineKeyboardButton;
 use SergiX44\Nutgram\Telegram\Types\Keyboard\InlineKeyboardMarkup;
 
 try {
+    // expire waiting orders more than 20 minute
+    $res = $mysqli->query("UPDATE orders SET status = 'EXPIRED' WHERE status = 'WAITING' AND created_at < NOW() - INTERVAL 20 MINUTE");
+    // expire waiting orders more than 20 minute
+
     // delete messages before last hours
     $res = $mysqli->query("SELECT * FROM messages WHERE status = 'ACTIVE' AND created_at < SUBDATE(CURRENT_TIMESTAMP(), INTERVAL 1 HOUR) GROUP BY user_id, message_id ORDER BY created_at ASC LIMIT 100");
     $deletableMessages = [];
@@ -82,8 +86,8 @@ try {
     // check if there is a session load hidden bot
     $sessions = $mysqli->query("SELECT * FROM sessions WHERE user_id = '$userId' AND status = 'ACTIVE'");
     if ($sessions->num_rows == 1) {
-        $row = $sessions->fetch_assoc();
-        $sessionId = $row['id'];
+        $session = $sessions->fetch_assoc();
+        $sessionId = $session['id'];
         $mysqli->query("UPDATE sessions SET update_on = CURRENT_TIMESTAMP() WHERE user_id = '$userId' AND id = '$sessionId'");
         require_once __DIR__ . "/HiddenBot/HiddenBotController.php";
     }
