@@ -4,6 +4,7 @@ global $telegram, $sessionId, $session, $mysqli;
 use SergiX44\Nutgram\Nutgram;
 use SergiX44\Nutgram\Telegram\Properties\MessageType;
 use SergiX44\Nutgram\Telegram\Properties\ParseMode;
+use SergiX44\Nutgram\Telegram\Types\Keyboard\CopyTextButton;
 use SergiX44\Nutgram\Telegram\Types\Keyboard\InlineKeyboardButton;
 use SergiX44\Nutgram\Telegram\Types\Keyboard\InlineKeyboardMarkup;
 
@@ -131,7 +132,7 @@ $telegram->onCallbackQueryData('buy {productId}-{count}', function (Nutgram $bot
             $user = new UserController($bot->userId());
             $address = $user->getSetting("address") ?? "ثبت نشده";
             $phone = $user->getSetting("phone_number") ?? "ثبت نشده";
-            $walletController =new WalletController();
+            $walletController = new WalletController();
             $bot->sendMessage(
                 sprintf("محصول: 
 <b>%s</b>
@@ -158,7 +159,12 @@ $telegram->onCallbackQueryData('buy {productId}-{count}', function (Nutgram $bot
                     $count, $amount, $walletController->getWallet(), $order['transaction_code']),
                 parse_mode: ParseMode::HTML,
                 protect_content: true,
-                reply_to_message_id: $bot->messageId());
+                reply_to_message_id: $bot->messageId(),
+                reply_markup: InlineKeyboardMarkup::make()
+                    ->addRow(InlineKeyboardButton::make("کپی کردن آدرس کیف پول", copy_text: CopyTextButton::make($walletController->getWallet())))
+                    ->addRow(InlineKeyboardButton::make("کپی کردن کامنت", copy_text: CopyTextButton::make($order['transaction_code'])))
+                    ->addRow(InlineKeyboardButton::make("کپی کردن مبلغ", copy_text: CopyTextButton::make($amount)))
+            );
         } else {
             $bot->answerCallbackQuery($bot->callbackQuery()->id, "اوردر یافت نشد");
         }

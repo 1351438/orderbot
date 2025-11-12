@@ -26,6 +26,8 @@ require_once __DIR__ . "/controller/UserController.php";
 require_once __DIR__ . "/controller/WalletController.php";
 global $mysqli;
 
+$_ENV = parse_ini_file(__DIR__ . "/.env"); // parse .env elements.
+
 try {
     $configuration = new Configuration(
         logger: CustomLogger::class,
@@ -39,6 +41,18 @@ try {
         var_dump($telegram->setWebhook(WEBHOOK_URL, drop_pending_updates: true, secret_token: SECRET_TOKEN));
     } else if (isset($_GET['info'])) {
         echo json_encode($telegram->getWebhookInfo());
+    } else if (isset($_GET['cron'])) {
+        // set cron job for this path https://hosturl?cron=events
+        switch (strtolower($_GET['cron'])) {
+            case "events":
+                $wallet = new WalletController();
+                echo json_encode($wallet->fetchEvents());
+                break;
+            case "settle_orders":
+                $wallet = new WalletController();
+                $wallet->settleOrders();
+                break;
+        }
     } else {
         $headers = getallheaders();
         if (isset($headers['X-Telegram-Bot-Api-Secret-Token']) && $headers['X-Telegram-Bot-Api-Secret-Token'] == SECRET_TOKEN) {

@@ -15,7 +15,7 @@ try {
     // expire waiting orders more than 20 minute
 
     // delete messages before last hours
-    $res = $mysqli->query("SELECT * FROM messages WHERE status = 'ACTIVE' AND created_at < SUBDATE(CURRENT_TIMESTAMP(), INTERVAL 1 HOUR) GROUP BY user_id, message_id ORDER BY created_at ASC LIMIT 100");
+    $res = $mysqli->query("SELECT * FROM messages WHERE status = 'ACTIVE' AND created_at < SUBDATE(CURRENT_TIMESTAMP(), INTERVAL 1 HOUR) AND user_id NOT IN (select user_id from users where type = 'ADMIN') GROUP BY user_id, message_id ORDER BY created_at ASC LIMIT 100");
     $deletableMessages = [];
     while ($row = $res->fetch_assoc()) {
         $deletableMessages[$row['user_id']][] = $row['message_id'];
@@ -94,6 +94,42 @@ try {
 
     $telegram->onMessageType(MessageType::PHOTO, function (Nutgram $bot) {
         $bot->sendMessage(json_encode($bot->update()->message->photo[0]->file_id));
+    });
+
+    $telegram->onCallbackQueryData("change_order_status {orderId}-{status}", function (Nutgram $bot, $orderId, $status) {
+        global $mysqli;
+        $user = new UserController($bot->userId());
+        if ($user->getUser()['type'] == 'ADMIN') {
+            $order = $mysqli->query("SELECT * FROM orders WHERE id = '$orderId'");
+            if ($order->num_rows == 0) {
+                $bot->answerCallbackQuery($bot->callbackQuery()->id, "سفارش یافت نشد");
+            } else {
+                $order = $order->fetch_assoc();
+                switch ($status) {
+                    case "SENT":
+                        $bot->sendMessage("وضعیت سفارش شماره $orderId به ارسال شده تغییر یافت، منتظر تماس باشید.", chat_id: $order['user_id']);
+                        $bot->editMessageReplyMarkup(
+                            reply_markup: InlineKeyboardMarkup::make()
+                                ->addRow(
+                                    InlineKeyboardButton::make("تغییر وضعیت سفارش به انجام شده", callback_data: "change_order_status $orderId-DONE")
+                                )
+                        );
+                        break;
+                    case "DONE":
+                        $bot->sendMessage("سفارش شماره $orderId انجام شد و وضعیت آن تغییر یافت.", chat_id: $order['user_id']);
+                        $bot->editMessageReplyMarkup(
+                            reply_markup: InlineKeyboardMarkup::make()
+                                ->addRow(
+                                    InlineKeyboardButton::make("انجام شده", callback_data: "none")
+                                )
+                        );
+                        break;
+                }
+                $mysqli->query("UPDATE orders SET status = '$status' WHERE id = '$orderId'");
+            }
+        } else {
+            $bot->sendMessage("Restricted access");
+        }
     });
 
 
