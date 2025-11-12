@@ -44,13 +44,37 @@ try {
     } else if (isset($_GET['cron'])) {
         // set cron job for this path https://hosturl?cron=events
         switch (strtolower($_GET['cron'])) {
-            case "events":
+            case "events": // every minute
                 $wallet = new WalletController();
                 echo json_encode($wallet->fetchEvents());
                 break;
-            case "settle_orders":
+            case "settle_orders": // every minute
                 $wallet = new WalletController();
                 $wallet->settleOrders();
+                break;
+            case "delete_messages": // every 5 minute
+                $res = $mysqli->query("SELECT * FROM messages WHERE status = 'ACTIVE' AND created_at < SUBDATE(CURRENT_TIMESTAMP(), INTERVAL 1 HOUR) AND user_id NOT IN (select user_id from users where type = 'ADMIN') GROUP BY user_id, message_id ORDER BY created_at ASC LIMIT 100");
+                $deletableMessages = [];
+                while ($row = $res->fetch_assoc()) {
+                    $deletableMessages[$row['user_id']][] = $row['message_id'];
+                }
+                $counter = 0;
+                foreach ($deletableMessages as $uid => $messages) {
+                    if ($counter < 10) {
+                        if (count($messages) > 0) {
+                            $telegram->deleteMessages($uid, $messages);
+                            $placeholders = implode(',', array_fill(0, count($messages), '?'));
+                            $stmt = $mysqli->prepare("UPDATE messages SET status = 'REMOVED' WHERE user_id = ? AND message_id IN ($placeholders)");
+                            $params = array_merge([$uid], $messages); // $uid is the first parameter
+                            $types = "i" . str_repeat('i', count($messages));
+                            $stmt->bind_param($types, ...$params);
+                            $stmt->execute();
+                            $counter++;
+                        }
+                    } else {
+                        break;
+                    }
+                }
                 break;
         }
     } else {
