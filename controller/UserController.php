@@ -36,4 +36,55 @@ class UserController
         $result = $stmt->get_result();
         return $result->fetch_assoc();
     }
+
+    public function getBalance()
+    {
+        global $mysqli;
+        $stmt = $mysqli->prepare("SELECT balance FROM balances WHERE user_id=?");
+        $stmt->bind_param('i', $this->userId);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        return $result->num_rows == 0 ? 0 : $result->fetch_assoc()['balance'] ?? 0;
+    }
+
+    public function addBalance($balance, $reference) {
+        global $mysqli;
+        $this->addReference($this->getBalance(), $balance, $reference);
+        $stmt = $mysqli->prepare("INSERT INTO balances (user_id, balance) VALUES (?, ?) ON DUPLICATE KEY UPDATE `balance` = balance + ?");
+        $stmt->bind_param("iii", $this->userId, $balance, $balance);
+        $stmt->execute();
+        return $mysqli->affected_rows;
+    }
+
+    public function reduceBalance($amount, $reference)
+    {
+        global $mysqli;
+        $balance = $this->getBalance();
+        if ($amount >= $balance) {
+            $this->addReference($balance, $amount, $reference);
+            $stmt = $mysqli->prepare("UPDATE balances SET balance = balance - ? WHERE user_id=?");
+            $stmt->bind_param("ii", $amount, $this->userId);
+            $stmt->execute();
+
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    public function addReference($beforeBalance, $amount, $reference)
+    {
+        global $mysqli;
+        $mysqli->query("INSERT INTO balance_history (user_id, amount, before_balance, reference) VALUES ('{$this->userId}', '$amount', '$beforeBalance','$reference')");
+    }
+
+    public function checkReferenceExist($reference)
+    {
+        global $mysqli;
+        $stmt = $mysqli->prepare("SELECT * FROM balance_history WHERE reference = ?");
+        $stmt->bind_param("i", $reference);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        return $result->num_rows != 0;
+    }
 }

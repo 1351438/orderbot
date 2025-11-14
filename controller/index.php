@@ -99,7 +99,8 @@ try {
     $telegram->onCallbackQueryData("change_order_status {orderId}-{status}", function (Nutgram $bot, $orderId, $status) {
         global $mysqli;
         $user = new UserController($bot->userId());
-        if ($user->getUser()['type'] == 'ADMIN') {
+        $managerUserId = $mysqli->query("SELECT p.manager FROM orders o LEFT JOIN products p ON p.id = o.product_id WHERE o.id = '$orderId'")->fetch_assoc()['manager'];
+        if ($user->getUser()['type'] == 'ADMIN' || $bot->userId() == $managerUserId) {
             $order = $mysqli->query("SELECT * FROM orders WHERE id = '$orderId'");
             if ($order->num_rows == 0) {
                 $bot->answerCallbackQuery($bot->callbackQuery()->id, "سفارش یافت نشد");
@@ -116,6 +117,12 @@ try {
                         );
                         break;
                     case "DONE":
+                        if ($order['status'] == 'SENT') { // add balance to manager account
+                            $manager = new UserController($managerUserId);
+                            if (!$manager->checkReferenceExist($orderId)) {
+                                $manager->addBalance($order['amount'], $orderId);
+                            }
+                        }
                         $bot->sendMessage("سفارش شماره $orderId انجام شد و وضعیت آن تغییر یافت.", chat_id: $order['user_id']);
                         $bot->editMessageReplyMarkup(
                             reply_markup: InlineKeyboardMarkup::make()

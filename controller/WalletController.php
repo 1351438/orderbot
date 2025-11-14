@@ -121,7 +121,6 @@ class WalletController
                 $userAddress = $user->getSetting("address");
                 $phoneNumber = $user->getSetting("phone_number");
 
-                $admin = $mysqli->query("SELECT * FROM users WHERE type = 'admin'");
                 $text = sprintf("#سفارش_جدید
 تاریخ: %s
 -------------------
@@ -148,22 +147,19 @@ class WalletController
                     $row['eventAmount'],
                     (new \Olifanton\Interop\Address($row['senderAddress']))->toString(true, true, true),
                 );
-                while ($admin_row = $admin->fetch_assoc()) {
-                    $telegram->sendMessage(
-                        $text,
-                        chat_id: $admin_row['user_id'],
-                        parse_mode: ParseMode::HTML,
-                        reply_markup: InlineKeyboardMarkup::make()
-                            ->addRow(
+                $telegram->sendMessage(
+                    $text,
+                    chat_id: $product['manager'],
+                    parse_mode: ParseMode::HTML,
+                    reply_markup: InlineKeyboardMarkup::make()
+                        ->addRow(
 //                                'WAITING','CANCELED','EXPIRED','ACCEPTED','SENT','DONE'
-                                InlineKeyboardButton::make("تغییر وضعیت به ارسال شده", callback_data: "change_order_status $row[id]-SENT"),
-                            )
-                            ->addRow(
-                                InlineKeyboardButton::make("تغییر وضعیت سفارش به انجام شده", callback_data: "change_order_status $row[id]-DONE")
-                            )
-                    );
-                    //todo add to change the buttons for changing status
-                }
+                            InlineKeyboardButton::make("تغییر وضعیت به ارسال شده", callback_data: "change_order_status $row[id]-SENT"),
+                        )
+                        ->addRow(
+                            InlineKeyboardButton::make("تغییر وضعیت سفارش به انجام شده", callback_data: "change_order_status $row[id]-DONE")
+                        )
+                );
 
                 $mysqli->commit();
             } catch (mysqli_sql_exception $e) {
