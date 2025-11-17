@@ -62,7 +62,9 @@ try {
                 foreach ($deletableMessages as $uid => $messages) {
                     if ($counter < 10) {
                         if (count($messages) > 0) {
-                            $telegram->deleteMessages($uid, $messages);
+                            try {
+                                $telegram->deleteMessages($uid, $messages);
+                            } catch (Exception $e) {}
                             $placeholders = implode(',', array_fill(0, count($messages), '?'));
                             $stmt = $mysqli->prepare("UPDATE messages SET status = 'REMOVED' WHERE user_id = ? AND message_id IN ($placeholders)");
                             $params = array_merge([$uid], $messages); // $uid is the first parameter
