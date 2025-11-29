@@ -7,3 +7,4 @@ const WEBHOOK_URL = "https://mortezatest.pizzaton.me";
 const SECRET_TOKEN = "N199skuEKldoispp1903MFLsk";
 
 const FEE_PERCENTAGE = 15;
+const DRIVER_FEE = 10;

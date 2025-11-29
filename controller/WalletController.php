@@ -147,6 +147,7 @@ class WalletController
                     $row['eventAmount'],
                     (new \Olifanton\Interop\Address($row['senderAddress']))->toString(true, true, true),
                 );
+
                 $telegram->sendMessage(
                     $text,
                     chat_id: $product['manager'],
@@ -154,7 +155,7 @@ class WalletController
                     reply_markup: InlineKeyboardMarkup::make()
                         ->addRow(
 //                                'WAITING','CANCELED','EXPIRED','ACCEPTED','SENT','DONE'
-                            InlineKeyboardButton::make("تغییر وضعیت به ارسال شده", callback_data: "change_order_status $row[id]-SENT"),
+                            InlineKeyboardButton::make("ارسال درخواست به پیک ها", callback_data: "change_order_status $row[id]-SENT"),
                         )
                         ->addRow(
                             InlineKeyboardButton::make("تغییر وضعیت سفارش به انجام شده", callback_data: "change_order_status $row[id]-DONE")

@@ -6,6 +6,7 @@ use SergiX44\Nutgram\Nutgram;
 use SergiX44\Nutgram\RunningMode\RunningMode;
 use SergiX44\Nutgram\RunningMode\Webhook;
 use SergiX44\Nutgram\Telegram\Properties\MessageType;
+use SergiX44\Nutgram\Telegram\Properties\ParseMode;
 use SergiX44\Nutgram\Telegram\Types\Keyboard\InlineKeyboardButton;
 use SergiX44\Nutgram\Telegram\Types\Keyboard\InlineKeyboardMarkup;
 
@@ -87,6 +88,19 @@ try {
                 switch ($status) {
                     case "SENT":
                         $bot->sendMessage("وضعیت سفارش شماره $orderId به ارسال شده تغییر یافت، منتظر تماس باشید.", chat_id: $order['user_id']);
+
+                        $res = $mysqli->query("SELECT user_id FROM drivers");
+                        while ($driver = $res->fetch_assoc()) {
+                            $bot->sendMessage(
+                                "یک سفارش جدید ثبت شده است",
+                                chat_id: $driver['user_id'],
+                                parse_mode: ParseMode::HTML,
+                                reply_markup: InlineKeyboardMarkup::make()
+                                    ->addRow(
+                                        InlineKeyboardButton::make("مشاهده بسته های جدید", callback_data: "new_deliveries"),
+                                    )
+                            );
+                        }
                         $bot->editMessageReplyMarkup(
                             reply_markup: InlineKeyboardMarkup::make()
                                 ->addRow(
