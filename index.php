@@ -94,7 +94,7 @@ try {
 } catch (\Psr\SimpleCache\InvalidArgumentException $e) {
     error_log("InvalidArgumentException: " . $e->getMessage());
 } catch (Throwable $e) {
-    error_log("Exception: " . $e->getTraceAsString());
+    error_log("Exception: " . $e->getTraceAsString() . $e->getMessage());
 }
 $mysqli->close();
 ?>

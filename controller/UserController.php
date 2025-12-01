@@ -26,6 +26,15 @@ class UserController
         $result = $stmt->get_result();
         return $result->fetch_assoc()['value'];
     }
+    public function getDriver()
+    {
+        global $mysqli;
+        $stmt = $mysqli->prepare("SELECT * FROM drivers WHERE user_id = ?");
+        $stmt->bind_param("i", $this->userId);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        return $result->fetch_assoc();
+    }
     
     public function getUser()
     {
@@ -51,7 +60,7 @@ class UserController
         global $mysqli;
         $this->addReference($this->getBalance(), $balance, $reference);
         $stmt = $mysqli->prepare("INSERT INTO balances (user_id, balance) VALUES (?, ?) ON DUPLICATE KEY UPDATE `balance` = balance + ?");
-        $stmt->bind_param("iii", $this->userId, $balance, $balance);
+        $stmt->bind_param("idd", $this->userId, $balance, $balance);
         $stmt->execute();
         return $mysqli->affected_rows;
     }
@@ -63,7 +72,7 @@ class UserController
         if ($amount >= $balance) {
             $this->addReference($balance, $amount, $reference);
             $stmt = $mysqli->prepare("UPDATE balances SET balance = balance - ? WHERE user_id=?");
-            $stmt->bind_param("ii", $amount, $this->userId);
+            $stmt->bind_param("id", $amount, $this->userId);
             $stmt->execute();
 
             return true;

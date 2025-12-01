@@ -89,7 +89,7 @@ try {
                     case "SENT":
                         $bot->sendMessage("وضعیت سفارش شماره $orderId به ارسال شده تغییر یافت، منتظر تماس باشید.", chat_id: $order['user_id']);
 
-                        $res = $mysqli->query("SELECT user_id FROM drivers");
+                        $res = $mysqli->query("SELECT user_id FROM drivers ORDER BY RAND() LIMIT 10");
                         while ($driver = $res->fetch_assoc()) {
                             $bot->sendMessage(
                                 "یک سفارش جدید ثبت شده است",
@@ -109,10 +109,21 @@ try {
                         );
                         break;
                     case "DONE":
-                        if ($order['status'] == 'SENT') { // add balance to manager account
+                        if ($order['status'] == 'DELIVERED') { // add balance to manager account
                             $manager = new UserController($managerUserId);
                             if (!$manager->checkReferenceExist($orderId)) {
-                                $manager->addBalance($order['amount'], $orderId);
+                                /// pay and split the shares
+                                $driver = new UserController($order['driver']);
+
+                                $amount = $order['amount'];
+
+                                $systemFee = $amount * FEE_PERCENTAGE / 100;
+                                $driverFee = $amount * DRIVER_FEE / 100;
+
+                                $amount -= ($systemFee + $driverFee);
+
+                                $manager->addBalance($amount , $orderId);
+                                $driver->addBalance($driverFee, $orderId);
                             }
                         }
                         $bot->sendMessage("سفارش شماره $orderId انجام شد و وضعیت آن تغییر یافت.", chat_id: $order['user_id']);
