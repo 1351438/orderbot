@@ -9,6 +9,10 @@ use SergiX44\Nutgram\Telegram\Types\Keyboard\InlineKeyboardButton;
 use SergiX44\Nutgram\Telegram\Types\Keyboard\InlineKeyboardMarkup;
 use SergiX44\Nutgram\Telegram\Types\Keyboard\ReplyKeyboardRemove;
 
+
+/**
+common actions
+ */
 $telegram->onCommand("submit_wallet", function (Nutgram $bot) {
     $user = new UserController($bot->userId());
     $user->setSetting("step", "set_wallet");

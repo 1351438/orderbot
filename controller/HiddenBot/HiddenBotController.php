@@ -8,6 +8,9 @@ use SergiX44\Nutgram\Telegram\Types\Keyboard\CopyTextButton;
 use SergiX44\Nutgram\Telegram\Types\Keyboard\InlineKeyboardButton;
 use SergiX44\Nutgram\Telegram\Types\Keyboard\InlineKeyboardMarkup;
 
+/**
+after active session user will be able to use the below commands
+ */
 function startCommand(Nutgram $bot)
 {
     global $session;
@@ -113,6 +116,7 @@ $telegram->onCallbackQueryData('product {id}-{tag}-{regionId}', function (Nutgra
     }
 });
 
+// buy product and create a invoice
 $telegram->onCallbackQueryData('buy {productId}-{count}', function (Nutgram $bot, $productId, $count) {
     global $mysqli;
     $products = $mysqli->query("SELECT p.*, c.name as city_name, r.region as region_name FROM products p LEFT JOIN region r ON r.id = p.region LEFT JOIN city c ON c.tag = r.city_tag WHERE p.id = '$productId'");

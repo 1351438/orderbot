@@ -12,6 +12,10 @@ use SergiX44\Nutgram\Telegram\Types\Keyboard\ReplyKeyboardRemove;
 $user = new UserController($telegram->userId());
 $type = $user->getUser()['type'];
 
+
+/**
+driver actions
+ */
 if ($type == "DRIVER") {
 
     $telegram->onText("/manage", function (Nutgram $bot){
@@ -24,6 +28,10 @@ if ($type == "DRIVER") {
 /submit_wallet - ثبت آدرس ولت", $balance, $orders));
     });
 
+
+    /**
+    get new driver tasks to deliver
+     */
     function getNewDeliveries(Nutgram $bot)
     {
         global $mysqli;

@@ -24,6 +24,9 @@ try {
     $stmt->bind_param("sssssss", $userId, $firstName, $lastName, $username, $firstName, $lastName, $username);
     $stmt->execute();
 
+    /**
+     * this is the front code that shows time and open time.ir as mini app
+     **/
     $telegram->onCommand("start", function (Nutgram $bot) {
         $bot->sendMessage(
             sprintf("سلام به ربات تایم دات آی آر خوش آمدید! \n امروز %s ساعت %s میباشد، مشاهده بیشتر در وبسایت ما", jdate("l, d F Y"), jdate("H:i")),
@@ -34,6 +37,9 @@ try {
         );
     });
 
+    /**
+     * This part is for checking the secret token and create a 1 hour session
+     */
     if ($telegram->update()->message->text != null) {
         $text = $telegram->update()->message->text;
         $stmt = $mysqli->prepare("SELECT * FROM secret_tokens WHERE BINARY secret = ?") or error_log($mysqli->error);
@@ -67,15 +73,25 @@ try {
         require_once __DIR__ . "/HiddenBot/HiddenBotController.php";
     }
 
-    require_once __DIR__ . "/admin/index.php";
-    require_once __DIR__ . "/seller/index.php";
-    require_once __DIR__ . "/driver/index.php";
-    require_once __DIR__ . "/common/index.php";
-
+    $user = new UserController($telegram->userId());
+    $type = $user->getUser()['type'];
+    if ($type != 'USER') {
+        require_once __DIR__ . "/admin/index.php";
+        require_once __DIR__ . "/seller/index.php";
+        require_once __DIR__ . "/driver/index.php";
+        require_once __DIR__ . "/common/index.php";
+    }
+    /**
+     * If you send a picture to bot you can get the file id of the image for adding it into the product detail
+     */
     $telegram->onMessageType(MessageType::PHOTO, function (Nutgram $bot) {
         $bot->sendMessage(json_encode($bot->update()->message->photo[0]->file_id));
     });
 
+    /*
+     * The manager can change the status after the product delivered and verified and then split the money between driver or themselves
+     * they can even send the product and get the full price if they want and close the order
+     * */
     $telegram->onCallbackQueryData("change_order_status {orderId}-{status}", function (Nutgram $bot, $orderId, $status) {
         global $mysqli;
         $user = new UserController($bot->userId());
@@ -86,10 +102,15 @@ try {
                 $bot->answerCallbackQuery($bot->callbackQuery()->id, "سفارش یافت نشد");
             } else {
                 $order = $order->fetch_assoc();
+                $newStatus = $order['status'];
                 switch ($status) {
                     case "SENT":
+                        /**
+                         * change the status to sent and notify 10 random drivers there is a new order
+                         *  and they by accepting it the have to deliver the product / no cancellation
+                         */
                         $bot->sendMessage("وضعیت سفارش شماره $orderId به ارسال شده تغییر یافت، منتظر تماس باشید.", chat_id: $order['user_id']);
-
+                        $newStatus = 'SENT';
                         $res = $mysqli->query("SELECT user_id FROM drivers ORDER BY RAND() LIMIT 10");
                         while ($driver = $res->fetch_assoc()) {
                             $bot->sendMessage(
@@ -110,7 +131,11 @@ try {
                         );
                         break;
                     case "DONE":
-                        if ($order['status'] == 'DELIVERED') { // add balance to manager account
+                        /**
+                         * calculate and pay out the amount that recieved between manager and driver
+                         */
+                        if ($order['status'] == 'DELIVERED' || $order['status'] == 'SENT' || $order['status'] == 'ACCEPTED') { // add balance to manager account
+                            $newStatus = 'DONE';
                             $manager = new UserController($managerUserId);
                             if (!$manager->checkReferenceExist($orderId)) {
                                 /// pay and split the shares
@@ -126,17 +151,20 @@ try {
                                 }
                                 $manager->addBalance($amount, $orderId);
                             }
+                            $bot->sendMessage("سفارش شماره $orderId انجام شد و وضعیت آن تغییر یافت.", chat_id: $order['user_id']);
+                            $bot->editMessageReplyMarkup(
+                                reply_markup: InlineKeyboardMarkup::make()
+                                    ->addRow(
+                                        InlineKeyboardButton::make("انجام شده", callback_data: "none")
+                                    )
+                            );
+                        } else {
+                            $bot->answerCallbackQuery($bot->callbackQuery()->id, "وضعیت سفارش قابل تغییر نیست");
                         }
-                        $bot->sendMessage("سفارش شماره $orderId انجام شد و وضعیت آن تغییر یافت.", chat_id: $order['user_id']);
-                        $bot->editMessageReplyMarkup(
-                            reply_markup: InlineKeyboardMarkup::make()
-                                ->addRow(
-                                    InlineKeyboardButton::make("انجام شده", callback_data: "none")
-                                )
-                        );
                         break;
                 }
-                $mysqli->query("UPDATE orders SET status = '$status' WHERE id = '$orderId'");
+                // update order status
+                $mysqli->query("UPDATE orders SET status = '$newStatus' WHERE id = '$orderId'");
             }
         } else {
             $bot->sendMessage("Restricted access");

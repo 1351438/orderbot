@@ -11,6 +11,9 @@ use SergiX44\Nutgram\Telegram\Types\Keyboard\InlineKeyboardMarkup;
 $user = new UserController($telegram->userId());
 $type = $user->getUser()['type'];
 
+/**
+seller actions
+ */
 if ($type == "SELLER") {
     $telegram->onText("/manage", function (Nutgram $bot){
         global $mysqli, $user;
