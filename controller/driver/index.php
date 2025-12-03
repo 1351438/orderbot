@@ -19,7 +19,9 @@ if ($type == "DRIVER") {
         $balance = $user->getBalance();
         $orders = $mysqli->query("SELECT  count(o.id) as c FROM orders o WHERE o.driver = '{$bot->userId()}' AND o.status = 'DONE'")->fetch_assoc()['c'];
         $bot->sendMessage(sprintf("سلام به پنل مدیریت خوش آمدید.\n موجودی شما: %s \n تعداد سفرها: %s
-/new_deliveries - بررسی برای سفر جدید", $balance, $orders));
+--------------------
+/new_deliveries - بررسی برای سفر جدید
+/submit_wallet - ثبت آدرس ولت", $balance, $orders));
     });
 
     function getNewDeliveries(Nutgram $bot)

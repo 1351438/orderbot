@@ -70,6 +70,7 @@ try {
     require_once __DIR__ . "/admin/index.php";
     require_once __DIR__ . "/seller/index.php";
     require_once __DIR__ . "/driver/index.php";
+    require_once __DIR__ . "/common/index.php";
 
     $telegram->onMessageType(MessageType::PHOTO, function (Nutgram $bot) {
         $bot->sendMessage(json_encode($bot->update()->message->photo[0]->file_id));

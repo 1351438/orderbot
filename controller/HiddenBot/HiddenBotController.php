@@ -186,6 +186,7 @@ $telegram->onCallbackQueryData("set_address", function (Nutgram $bot) {
     $bot->sendMessage("آدرس خود را ارسال کنید.");
 });
 
+
 $telegram->onMessageType(MessageType::TEXT, function (Nutgram $bot) {
     $user = new UserController($bot->userId());
     if ($user->getSetting("step") == "set_number") {

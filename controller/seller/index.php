@@ -16,6 +16,8 @@ if ($type == "SELLER") {
         global $mysqli, $user;
         $balance = $user->getBalance();
         $orders = $mysqli->query("SELECT  count(o.id) as c FROM orders o WHERE o.product_id IN (SELECT id FROM products WHERE manager = '{$bot->userId()}') AND o.status NOT IN ('EXPIRED', 'WAITING')")->fetch_assoc()['c'];
-        $bot->sendMessage(sprintf("سلام به پنل مدیریت خوش آمدید.\n موجودی شما: %s \n تعداد سفارشات: %s", $balance, $orders));
+        $bot->sendMessage(sprintf("سلام به پنل مدیریت خوش آمدید.\n موجودی شما: %s \n تعداد سفارشات: %s
+--------------------
+/submit_wallet - ثبت آدرس ولت", $balance, $orders));
     });
 }
