@@ -13,7 +13,7 @@ $user = new UserController($telegram->userId());
 $type = $user->getUser()['type'];
 
 if ($type == "ADMIN") {
-    $telegram->onText("/manage", function (Nutgram $bot){
+    $telegram->onText("/manage", function (Nutgram $bot) {
         global $mysqli, $user;
         $balance = $user->getBalance();
         $stats = $mysqli->query("SELECT count(id) as all_orders, 
@@ -24,7 +24,7 @@ if ($type == "ADMIN") {
                                             (SELECT sum(balance) FROM balances) as total_balances,
                                             (SELECT count(user_id) FROM balances WHERE balance > 0) as total_people_for_payout
                                         FROM orders");
-        $stats= $stats->fetch_assoc();
+        $stats = $stats->fetch_assoc();
 
         $bot->sendMessage(sprintf("به پنل مدیریت خوش آمدید
 تعداد کل سفارشات ثبت شده: %s
@@ -35,9 +35,45 @@ if ($type == "ADMIN") {
 مقدار کل قابل پرداخت جهت تسویه:
 %s TON
 تعداد نفرات جهت تسویه:
-%s نفر", $stats['all_orders'],$stats['done_orders'], $stats['total_drivers'],$stats['total_products'],
-        $stats['total_balances'],
-        $stats['total_people_for_payout']));
+%s نفر
+
+------------------------------
+/balances - مشاهده برداشت ها و تسویه", $stats['all_orders'], $stats['done_orders'], $stats['total_drivers'], $stats['total_products'],
+            $stats['total_balances'],
+            $stats['total_people_for_payout']));
     });
 
+    $telegram->onCommand("balances", function (Nutgram $bot) {
+        global $mysqli, $user;
+        $res = $mysqli->query("SELECT balances.user_id, balances.balance as balance, settings.value as wallet_address FROM balances JOIN settings on settings.user_id = balances.user_id AND settings.name = 'wallet_address' AND balances.balance > 0 ORDER BY balance LIMIT 1");
+        if ($res->num_rows > 0) {
+            $row = $res->fetch_assoc();
+            $bot->sendMessage("موجودی یکی از کاربران، پس از تسویه میتوانید به شخص بعدی با ارسال مجدد /balances برای تسویه بروید.
+" . sprintf("
+آیدی کاربر: %s
+مبلغ: %s TON
+آدرس کیف پول: <code>%s</code>
+", $row['user_id'], $row['balance'], $row['wallet_address']),
+                parse_mode: ParseMode::HTML,
+                reply_markup: InlineKeyboardMarkup::make()->addRow(
+                    InlineKeyboardButton::make("کپی آدرس کیف پول", copy_text: CopyTextButton::make($row['wallet_address'])),
+                )->addRow(
+                    InlineKeyboardButton::make("کپی مبلغ", copy_text: CopyTextButton::make($row['balance'])),
+                )->addRow(
+                    InlineKeyboardButton::make("صفر کردن موجودی",callback_data: "payout $row[user_id]")
+                )
+            );
+        } else {
+            $bot->sendMessage("رکوردی برای تسویه حساب موجود نمیباشد");
+        }
+    });
+
+    $telegram->onCallbackQueryData("payout {userId}", function (Nutgram $bot, $userId) {
+        global $mysqli;
+        $target = new UserController($userId);
+        $balance = $target->getBalance();
+        $target->reduceBalance($balance, 'withdraw');
+        $bot->editMessageReplyMarkup($bot->userId(), message_id: $bot->messageId());
+        $bot->sendMessage(sprintf("مقدار %s TON از کاربر %s کم شد و موجودی آن 0 شد.", $balance, $userId));
+    });
 }

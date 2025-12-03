@@ -114,17 +114,17 @@ try {
                             $manager = new UserController($managerUserId);
                             if (!$manager->checkReferenceExist($orderId)) {
                                 /// pay and split the shares
-                                $driver = new UserController($order['driver']);
-
                                 $amount = $order['amount'];
 
                                 $systemFee = $amount * FEE_PERCENTAGE / 100;
                                 $driverFee = $amount * DRIVER_FEE / 100;
-
-                                $amount -= ($systemFee + $driverFee);
-
-                                $manager->addBalance($amount , $orderId);
-                                $driver->addBalance($driverFee, $orderId);
+                                $amount -= ($systemFee);
+                                if ($order['driver'] != null) {
+                                    $amount -= $driverFee;
+                                    $driver = new UserController($order['driver']);
+                                    $driver->addBalance($driverFee, $orderId);
+                                }
+                                $manager->addBalance($amount, $orderId);
                             }
                         }
                         $bot->sendMessage("سفارش شماره $orderId انجام شد و وضعیت آن تغییر یافت.", chat_id: $order['user_id']);

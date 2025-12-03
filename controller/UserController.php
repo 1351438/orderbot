@@ -17,14 +17,14 @@ class UserController
         $stmt->execute();
     }
 
-    public function getSetting($name)
+    public function getSetting($name, $defaultValue = null)
     {
         global $mysqli;
         $stmt = $mysqli->prepare("SELECT * FROM settings WHERE user_id = ? AND name = ?");
         $stmt->bind_param("is", $this->userId, $name);
         $stmt->execute();
         $result = $stmt->get_result();
-        return $result->fetch_assoc()['value'];
+        return $result->fetch_assoc()['value'] ?? $defaultValue;
     }
     public function getDriver()
     {
@@ -69,10 +69,10 @@ class UserController
     {
         global $mysqli;
         $balance = $this->getBalance();
-        if ($amount >= $balance) {
+        if ($amount <= $balance) {
             $this->addReference($balance, $amount, $reference);
             $stmt = $mysqli->prepare("UPDATE balances SET balance = balance - ? WHERE user_id=?");
-            $stmt->bind_param("id", $amount, $this->userId);
+            $stmt->bind_param("di", $amount, $this->userId);
             $stmt->execute();
 
             return true;
