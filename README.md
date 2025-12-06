@@ -20,6 +20,7 @@ in the products table you must insert the products base on the regions and citie
 in the `wallets` table you have add only one record for the receiving money wallet
 
 # Install
+copy the files with .copy extension and remove that .copy part and then edit the following codes.
 update `.env` and `/config/config.php` and `/config/database.php` for the configuration
 
 upload db.sql into the phpmyadmin for create tables.

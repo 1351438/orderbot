@@ -1,0 +1,10 @@
+<?php
+
+
+
+const BOT_TOKEN = 'BOTFATHER:TOKEN';
+const WEBHOOK_URL = "https://WEBHOOKURL";
+const SECRET_TOKEN = "GENERATE_RANDOM_PASSWORD";
+
+const FEE_PERCENTAGE = 15;
+const DRIVER_FEE = 10;
