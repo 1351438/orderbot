@@ -19,10 +19,11 @@ function startCommand(Nutgram $bot)
 
     $phone = $user->getSetting("phone_number") ?? "ثبت نشده";
     $address = $user->getSetting("address") ?? "ثبت نشده";
+    $fullname = $user->getSetting("fullname") ?? "ثبت نشده";
     $expireIn = jdate("d F Y H:i", strtotime($session['expire_in']));
 
 
-    $bot->sendMessage(sprintf("خوش اومدید، قبل از ثبت سفارش حتما آدرس و شماره تماس خود را ثبت کنید.\nآدرس فعلی: %s \n شماره تماس: %s\nانقضای نشست فعلی: %s", $address, $phone, $expireIn),
+    $bot->sendMessage(sprintf("خوش اومدید، قبل از ثبت سفارش حتما آدرس و شماره تماس خود را ثبت کنید.\nآدرس فعلی: %s \n نام و نام‌خانوادگی: %s \nشماره تماس: %s\nانقضای نشست فعلی: %s", $address, $fullname, $phone, $expireIn),
         protect_content: true,
         reply_markup: InlineKeyboardMarkup::make()
             ->addRow(
@@ -30,7 +31,10 @@ function startCommand(Nutgram $bot)
             )->addRow(
                 InlineKeyboardButton::make("تنظیم شماره تماس", callback_data: "set_number"),
                 InlineKeyboardButton::make("تنظیم آدرس", callback_data: "set_address"),
-            ));
+            )->addRow(
+                InlineKeyboardButton::make("تنظیم نام و نام خانوادگی", callback_data: "set_fullname"),
+            )
+    );
 }
 
 $telegram->onCommand('start', 'startCommand');
@@ -64,11 +68,29 @@ $telegram->onCallbackQueryData('city {tag}', function (Nutgram $bot, $tag) {
     }
 });
 
-// showing product after selecting regions
+// showing sellers after selecting regions
 $telegram->onCallbackQueryData('{tag} region {id}', function (Nutgram $bot, $tag, $regionId) {
     global $mysqli;
 
-    $products = $mysqli->query("SELECT * FROM products WHERE region = '$regionId'");
+    $products = $mysqli->query("SELECT * FROM products WHERE region = '$regionId' GROUP BY manager");
+    $buttons = InlineKeyboardMarkup::make();
+    if ($products->num_rows > 0) {
+        while ($product = $products->fetch_assoc()) {
+            $buttons->addRow(InlineKeyboardButton::make("فروشنده " . $product['manager'], callback_data: "seller $product[manager] $tag region $regionId"));
+        }
+        $buttons->addRow(InlineKeyboardButton::make("بازگشت به منطقه ها", callback_data: "city " . $tag));
+        $bot->editMessageText("لطفا یکی از محصولات زیر را انتخاب کنید.", reply_markup: $buttons);
+    } else {
+        $buttons->addRow(InlineKeyboardButton::make("بازگشت به منطقه ها", callback_data: "city " . $tag));
+        $bot->editMessageText("هیچ محصولی در این منطقه یافت نشد.", reply_markup: $buttons);
+    }
+});
+
+// showing product of seller
+$telegram->onCallbackQueryData('seller {sellerid} {tag} region {id}', function (Nutgram $bot, $sellerId, $tag, $regionId) {
+    global $mysqli;
+
+    $products = $mysqli->query("SELECT * FROM products WHERE region = '$regionId' AND manager = '$sellerId'");
     $buttons = InlineKeyboardMarkup::make();
     if ($products->num_rows > 0) {
         while ($product = $products->fetch_assoc()) {
@@ -105,7 +127,7 @@ $telegram->onCallbackQueryData('product {id}-{tag}-{regionId}', function (Nutgra
         $text = sprintf("عنوان محصول: %s
 توضیحات: %s
 
-قیمت واحد: %s TON", $product['title'], $product['description'], $product['unit_price']);
+قیمت واحد: %s TON", $product['name'], $product['description'], $product['unit_price']);
         if (isset($product['file_id'])) {
             $bot->editMessageMedia(new \SergiX44\Nutgram\Telegram\Types\Input\InputMediaPhoto($product['file_id'], $text, has_spoiler: true), reply_markup: $buttons);
         } else {
@@ -191,6 +213,13 @@ $telegram->onCallbackQueryData("set_address", function (Nutgram $bot) {
 });
 
 
+$telegram->onCallbackQueryData("set_fullname", function (Nutgram $bot) {
+    $user = new UserController($bot->userId());
+    $user->setSetting("step", "set_fullname");
+    $bot->sendMessage("نام و نام خانوادگی خود را به صورت کامل ارسال کنید.");
+});
+
+
 $telegram->onMessageType(MessageType::TEXT, function (Nutgram $bot) {
     $user = new UserController($bot->userId());
     if ($user->getSetting("step") == "set_number") {
@@ -207,5 +236,10 @@ $telegram->onMessageType(MessageType::TEXT, function (Nutgram $bot) {
         $user->setSetting("address", $text);
         $user->setSetting("step", "none");
         $bot->sendMessage("آدرس با موفقیت تغییر یافت. دستور /start را ارسال کنید");
+    } else if ($user->getSetting("step") == "set_fullname") {
+        $text = $bot->update()->message->text;
+        $user->setSetting("fullname", $text);
+        $user->setSetting("step", "none");
+        $bot->sendMessage("نام و نام خانوادگی با موفقیت تغییر یافت. دستور /start را ارسال کنید");
     }
 });

@@ -26,6 +26,7 @@ class UserController
         $result = $stmt->get_result();
         return $result->fetch_assoc()['value'] ?? $defaultValue;
     }
+
     public function getDriver()
     {
         global $mysqli;
@@ -35,7 +36,7 @@ class UserController
         $result = $stmt->get_result();
         return $result->fetch_assoc();
     }
-    
+
     public function getUser()
     {
         global $mysqli;
@@ -56,12 +57,16 @@ class UserController
         return $result->num_rows == 0 ? 0 : $result->fetch_assoc()['balance'] ?? 0;
     }
 
-    public function addBalance($balance, $reference) {
-        global $mysqli;
+    public function addBalance($balance, $reference)
+    {
+        global $mysqli, $telegram;
         $this->addReference($this->getBalance(), $balance, $reference);
         $stmt = $mysqli->prepare("INSERT INTO balances (user_id, balance) VALUES (?, ?) ON DUPLICATE KEY UPDATE `balance` = balance + ?");
         $stmt->bind_param("idd", $this->userId, $balance, $balance);
         $stmt->execute();
+        if (isset($telegram)) {
+            $telegram->sendMessage(sprintf("%s TON به موجودی شما اضافه شد.", $balance), chat_id: $this->userId);
+        }
         return $mysqli->affected_rows;
     }
 

@@ -70,7 +70,7 @@ if ($type == "DRIVER") {
     $telegram->onCallbackQueryData("accept_driving_order {id}", function (Nutgram $bot, $id) {
         global $mysqli;
 
-        $noOrderDelivery = $mysqli->query("SELECT id FROM orders WHERE driver is {$bot->userId()} AND status IN ('SENT', 'DRIVER')");
+        $noOrderDelivery = $mysqli->query("SELECT id FROM orders WHERE driver = '{$bot->userId()}' AND status IN ('SENT', 'DRIVER')");
         $res = $mysqli->query("SELECT * FROM orders WHERE id = '$id' AND driver is null AND status = 'SENT' LIMIT 1");
         if ($res->num_rows > 0 && $noOrderDelivery->num_rows == 0) {
             $order = $res->fetch_assoc();
@@ -111,7 +111,7 @@ if ($type == "DRIVER") {
 
             $bot->sendMessage(sprintf("راننده برای سفارش %s انتخاب شد
 شماره تماس راننده: %s
-نام راننده: %s", $id, $driverNumber, $driverNumber), chat_id: $product['manager']);
+نام راننده: %s", $id, $driverNumber, $driverName), chat_id: $product['manager']);
         } else {
             $bot->sendMessage("سفارش توسط راننده ای دیگر قبول شده است");
         }
